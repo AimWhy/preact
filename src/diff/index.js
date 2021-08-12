@@ -1,9 +1,9 @@
-import { EMPTY_OBJ, EMPTY_ARR } from '../constants';
-import { Component } from '../component';
+import { EMPTY_OBJ } from '../constants';
+import { Component, getDomSibling } from '../component';
 import { Fragment } from '../create-element';
 import { diffChildren } from './children';
 import { diffProps, setProperty } from './props';
-import { assign, removeNode } from '../util';
+import { assign, removeNode, slice } from '../util';
 import options from '../options';
 
 /**
@@ -363,8 +363,7 @@ function diffElementNodes(
 		}
 	} else {
 		// If excessDomChildren was not null, repopulate it with the current element's children:
-		excessDomChildren =
-			excessDomChildren && EMPTY_ARR.slice.call(dom.childNodes);
+		excessDomChildren = excessDomChildren && slice.call(dom.childNodes);
 
 		oldProps = oldVNode.props || EMPTY_OBJ;
 
@@ -378,7 +377,7 @@ function diffElementNodes(
 			// we should read the existing DOM attributes to diff them
 			if (excessDomChildren != null) {
 				oldProps = {};
-				for (let i = 0; i < dom.attributes.length; i++) {
+				for (i = 0; i < dom.attributes.length; i++) {
 					oldProps[dom.attributes[i].name] = dom.attributes[i].value;
 				}
 			}
@@ -411,7 +410,9 @@ function diffElementNodes(
 				isSvg && nodeType !== 'foreignObject',
 				excessDomChildren,
 				commitQueue,
-				dom.firstChild,
+				excessDomChildren
+					? excessDomChildren[0]
+					: oldVNode._children && getDomSibling(oldVNode, 0),
 				isHydrating
 			);
 
