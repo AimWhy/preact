@@ -35,7 +35,7 @@ export function diffProps(dom, newProps, oldProps, isSvg, hydrate) {
 
 function setStyle(style, key, value) {
 	if (key[0] === '-') {
-		style.setProperty(key, value);
+		style.setProperty(key, value == null ? '' : value);
 	} else if (value == null) {
 		style[key] = '';
 	} else if (typeof value != 'number' || IS_NON_DIMENSIONAL.test(key)) {
@@ -106,8 +106,10 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
 			// Normalize incorrect prop usage for SVG:
 			// - xlink:href / xlinkHref --> href (xlink:href was removed from SVG and isn't needed)
 			// - className --> class
-			name = name.replace(/xlink[H:h]/, 'h').replace(/sName$/, 's');
+			name = name.replace(/xlink(H|:h)/, 'h').replace(/sName$/, 's');
 		} else if (
+			name !== 'width' &&
+			name !== 'height' &&
 			name !== 'href' &&
 			name !== 'list' &&
 			name !== 'form' &&
@@ -115,6 +117,8 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
 			// cast to `0` instead
 			name !== 'tabIndex' &&
 			name !== 'download' &&
+			name !== 'rowSpan' &&
+			name !== 'colSpan' &&
 			name in dom
 		) {
 			try {
@@ -124,19 +128,16 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
 			} catch (e) {}
 		}
 
-		// ARIA-attributes have a different notion of boolean values.
-		// The value `false` is different from the attribute not
-		// existing on the DOM, so we can't remove it. For non-boolean
-		// ARIA-attributes we could treat false as a removal, but the
-		// amount of exceptions would cost us too many bytes. On top of
-		// that other VDOM frameworks also always stringify `false`.
+		// aria- and data- attributes have no boolean representation.
+		// A `false` value is different from the attribute not being
+		// present, so we can't remove it. For non-boolean aria
+		// attributes we could treat false as a removal, but the
+		// amount of exceptions would cost too many bytes. On top of
+		// that other frameworks generally stringify `false`.
 
 		if (typeof value === 'function') {
 			// never serialize functions as attribute values
-		} else if (
-			value != null &&
-			(value !== false || (name[0] === 'a' && name[1] === 'r'))
-		) {
+		} else if (value != null && (value !== false || name[4] === '-')) {
 			dom.setAttribute(name, value);
 		} else {
 			dom.removeAttribute(name);
@@ -150,9 +151,9 @@ export function setProperty(dom, name, value, oldValue, isSvg) {
  * @private
  */
 function eventProxy(e) {
-	this._listeners[e.type + false](options.event ? options.event(e) : e);
+	return this._listeners[e.type + false](options.event ? options.event(e) : e);
 }
 
 function eventProxyCapture(e) {
-	this._listeners[e.type + true](options.event ? options.event(e) : e);
+	return this._listeners[e.type + true](options.event ? options.event(e) : e);
 }

@@ -79,6 +79,19 @@ describe('render()', () => {
 		expect(scratch.innerHTML).to.eql(`<div>Good</div>`);
 	});
 
+	it('should render % width and height on img correctly', () => {
+		render(<img width="100%" height="100%" />, scratch);
+		expect(scratch.innerHTML).to.eql(`<img width="100%" height="100%">`);
+	});
+
+	// IE11 doesn't support these.
+	if (!/Trident/.test(window.navigator.userAgent)) {
+		it('should render px width and height on img correctly', () => {
+			render(<img width="100px" height="100px" />, scratch);
+			expect(scratch.innerHTML).to.eql(`<img width="100px" height="100px">`);
+		});
+	}
+
 	it('should not render when detecting JSON-injection', () => {
 		const vnode = JSON.parse('{"type":"span","children":"Malicious"}');
 		render(vnode, scratch);
@@ -241,6 +254,16 @@ describe('render()', () => {
 		expect(scratch.innerHTML).to.equal('<div></div>');
 	});
 
+	it('should not render children when rerendering a function child', () => {
+		const icon = () => {};
+
+		render(<div>{icon}</div>, scratch);
+		expect(scratch.innerHTML).to.equal('<div></div>');
+
+		render(<div>{icon}</div>, scratch);
+		expect(scratch.innerHTML).to.equal('<div></div>');
+	});
+
 	it('should render NaN as text content', () => {
 		render(NaN, scratch);
 		expect(scratch.innerHTML).to.equal('NaN');
@@ -391,6 +414,48 @@ describe('render()', () => {
 		});
 	}
 
+	// Test for #3969
+	it('should clear rowspan and colspan', () => {
+		let update;
+		class App extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { active: true };
+				update = this.setState.bind(this);
+			}
+
+			render() {
+				return (
+					<div>
+						{this.state.active ? (
+							<table>
+								<tr>
+									<td rowSpan={2} colSpan={2}>
+										Foo
+									</td>
+								</tr>
+							</table>
+						) : (
+							<table>
+								<tr>
+									<td>Foo</td>
+								</tr>
+							</table>
+						)}
+					</div>
+				);
+			}
+		}
+
+		render(<App />, scratch);
+
+		update({ active: false });
+		rerender();
+
+		expect(scratch.querySelector('td[rowspan]')).to.equal(null);
+		expect(scratch.querySelector('td[colspan]')).to.equal(null);
+	});
+
 	// Test for preactjs/preact#651
 	it('should set enumerable boolean attribute', () => {
 		render(<input spellcheck={false} />, scratch);
@@ -462,9 +527,19 @@ describe('render()', () => {
 		expect(scratch.childNodes[0]).to.have.property('className', 'bar');
 	});
 
-	it('should support false aria-* attributes', () => {
+	it('should support false string aria-* attributes', () => {
 		render(<div aria-checked="false" />, scratch);
 		expect(scratch.firstChild.getAttribute('aria-checked')).to.equal('false');
+	});
+
+	it('should support false aria-* attributes', () => {
+		render(<div aria-checked={false} />, scratch);
+		expect(scratch.firstChild.getAttribute('aria-checked')).to.equal('false');
+	});
+
+	it('should support false data-* attributes', () => {
+		render(<div data-checked={false} />, scratch);
+		expect(scratch.firstChild.getAttribute('data-checked')).to.equal('false');
 	});
 
 	it('should set checked attribute on custom elements without checked property', () => {
@@ -984,6 +1059,51 @@ describe('render()', () => {
 		rerender();
 
 		expect(scratch.textContent).to.equal('01');
+	});
+
+	it('should not remove iframe', () => {
+		let setState;
+		const Iframe = () => {
+			return <iframe src="https://codesandbox.io/s/runtime-silence-no4zx" />;
+		};
+
+		const Test2 = () => <div>Test2</div>;
+		const Test3 = () => <div>Test3</div>;
+
+		class App extends Component {
+			constructor(props) {
+				super(props);
+				this.state = { value: true };
+				setState = this.setState.bind(this);
+			}
+
+			render(props, state) {
+				return (
+					<div>
+						{state.value ? <Test3 /> : null}
+						{state.value ? <Test2 /> : null}
+						<Iframe key="iframe" />
+					</div>
+				);
+			}
+		}
+
+		render(<App />, scratch);
+
+		expect(scratch.innerHTML).to.equal(
+			'<div><div>Test3</div><div>Test2</div><iframe src="https://codesandbox.io/s/runtime-silence-no4zx"></iframe></div>'
+		);
+		clearLog();
+		setState({ value: false });
+		rerender();
+
+		expect(scratch.innerHTML).to.equal(
+			'<div><iframe src="https://codesandbox.io/s/runtime-silence-no4zx"></iframe></div>'
+		);
+		expect(getLog()).to.deep.equal([
+			'<div>Test2.remove()',
+			'<div>Test3.remove()'
+		]);
 	});
 
 	it('should not cause infinite loop with referentially equal props', () => {

@@ -158,6 +158,29 @@ describe('compat render', () => {
 		expect(scratch.firstElementChild.value).to.equal('0');
 	});
 
+	it('should call onChange and onInput when input event is dispatched', () => {
+		const onChange = sinon.spy();
+		const onInput = sinon.spy();
+
+		render(<input onChange={onChange} onInput={onInput} />, scratch);
+
+		scratch.firstChild.dispatchEvent(createEvent('input'));
+
+		expect(onChange).to.be.calledOnce;
+		expect(onInput).to.be.calledOnce;
+
+		onChange.resetHistory();
+		onInput.resetHistory();
+
+		// change props order
+		render(<input onInput={onInput} onChange={onChange} />, scratch);
+
+		scratch.firstChild.dispatchEvent(createEvent('input'));
+
+		expect(onChange).to.be.calledOnce;
+		expect(onInput).to.be.calledOnce;
+	});
+
 	it('should keep value of uncontrolled inputs using defaultValue', () => {
 		// See https://github.com/preactjs/preact/issues/2391
 
@@ -229,6 +252,21 @@ describe('compat render', () => {
 		);
 	});
 
+	it('shouldnot transform imageSrcSet', () => {
+		render(
+			<link
+				rel="preload"
+				as="image"
+				href="preact.jpg"
+				imageSrcSet="preact_400px.jpg 400w"
+			/>,
+			scratch
+		);
+		expect(scratch.innerHTML).to.equal(
+			'<link rel="preload" as="image" href="preact.jpg" imagesrcset="preact_400px.jpg 400w">'
+		);
+	});
+
 	it('should correctly allow for "className"', () => {
 		const Foo = props => {
 			const { className, ...rest } = props;
@@ -297,6 +335,7 @@ describe('compat render', () => {
 		it('should preserve className, add class alias', () => {
 			const { props } = <ul className="from className" />;
 			expect(props).to.have.property('className', 'from className');
+			// TODO: why would we do this, assuming that folks add className themselves
 			expect(props).to.have.property('class', 'from className');
 		});
 
@@ -319,6 +358,7 @@ describe('compat render', () => {
 			const { props } = <ul className="from className" />;
 			const spreaded = (<li a {...props} />).props;
 			expect(spreaded).to.have.property('className', 'from className');
+			// TODO: why would we do this, assuming that folks add className themselves
 			expect(spreaded).to.have.property('class', 'from className');
 			expect(spreaded.propertyIsEnumerable('class')).to.equal(true);
 		});
@@ -452,14 +492,23 @@ describe('compat render', () => {
 		expect(updateSpy).to.not.be.calledOnce;
 	});
 
+	it('should support false aria-* attributes', () => {
+		render(<div aria-checked={false} />, scratch);
+		expect(scratch.firstChild.getAttribute('aria-checked')).to.equal('false');
+	});
+
+	it('should support false data-* attributes', () => {
+		render(<div data-checked={false} />, scratch);
+		expect(scratch.firstChild.getAttribute('data-checked')).to.equal('false');
+	});
+
 	it("should support react-relay's usage of __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED", () => {
 		const Ctx = createContext('foo');
 
 		// Simplified version of: https://github.com/facebook/relay/blob/fba79309977bf6b356ee77a5421ca5e6f306223b/packages/react-relay/readContext.js#L17-L28
 		function readContext(Context) {
-			const {
-				ReactCurrentDispatcher
-			} = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+			const { ReactCurrentDispatcher } =
+				React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
 			const dispatcher = ReactCurrentDispatcher.current;
 			return dispatcher.readContext(Context);
 		}

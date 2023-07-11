@@ -1,4 +1,4 @@
-import { PreactContext, Ref as PreactRef } from '../..';
+import { ErrorInfo, PreactContext, Ref as PreactRef } from '../..';
 
 type Inputs = ReadonlyArray<unknown>;
 
@@ -15,6 +15,7 @@ export function useState<S = undefined>(): [
 ];
 
 export type Reducer<S, A> = (prevState: S, action: A) => S;
+export type Dispatch<A> = (action: A) => void;
 /**
  * An alternative to `useState`.
  *
@@ -27,7 +28,7 @@ export type Reducer<S, A> = (prevState: S, action: A) => S;
 export function useReducer<S, A>(
 	reducer: Reducer<S, A>,
 	initialState: S
-): [S, (action: A) => void];
+): [S, Dispatch<A>];
 
 /**
  * An alternative to `useState`.
@@ -43,7 +44,7 @@ export function useReducer<S, A, I>(
 	reducer: Reducer<S, A>,
 	initialArg: I,
 	init: (arg: I) => S
-): [S, (action: A) => void];
+): [S, Dispatch<A>];
 
 /** @deprecated Use the `Ref` type instead. */
 type PropRef<T> = MutableRef<T>;
@@ -135,5 +136,7 @@ export function useContext<T>(context: PreactContext<T>): T;
 export function useDebugValue<T>(value: T, formatter?: (value: T) => any): void;
 
 export function useErrorBoundary(
-	callback?: (error: any) => Promise<void> | void
+	callback?: (error: any, errorInfo: ErrorInfo) => Promise<void> | void
 ): [any, () => void];
+
+export function useId(): string;

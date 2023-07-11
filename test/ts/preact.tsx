@@ -5,7 +5,8 @@ import {
 	ComponentProps,
 	FunctionalComponent,
 	AnyComponent,
-	h
+	h,
+	createRef
 } from '../../';
 
 interface DummyProps {
@@ -78,6 +79,12 @@ render(
 	document
 );
 
+// Mounting into different types of Nodes
+render(h('div', {}), document.createElement('div'));
+render(h('div', {}), document);
+render(h('div', {}), document.createElement('div').shadowRoot!);
+render(h('div', {}), document.createDocumentFragment());
+
 // Accessing children
 const ComponentWithChildren: FunctionalComponent<DummerComponentProps> = ({
 	input,
@@ -101,6 +108,23 @@ const UseOfComponentWithChildren = () => {
 		</ComponentWithChildren>
 	);
 };
+
+// TODO: make this work
+// const DummyChildren: FunctionalComponent = ({ children }) => {
+// 	return children;
+// };
+
+// function ReturnChildren(props: { children: preact.ComponentChildren }) {
+// 	return props.children;
+// }
+
+// function TestUndefinedChildren() {
+// 	return (
+// 		<ReturnChildren>
+// 			<ReturnChildren>Hello</ReturnChildren>
+// 		</ReturnChildren>
+// 	);
+// }
 
 // using ref and or jsx
 class ComponentUsingRef extends Component<any, any> {
@@ -295,3 +319,22 @@ let elementProps: ComponentProps<'button'> = {
 // Typing of style property
 const acceptsNumberAsLength = <div style={{ marginTop: 20 }} />;
 const acceptsStringAsLength = <div style={{ marginTop: '20px' }} />;
+
+const ReturnNull: FunctionalComponent = () => null;
+
+// Refs should work on elements
+const ref = createRef<HTMLDivElement>();
+createElement('div', { ref: ref }, 'hi');
+h('div', { ref: ref }, 'hi');
+
+// Refs should work on functions
+const functionRef = createRef();
+const RefComponentTest = () => <p>hi</p>;
+createElement(RefComponentTest, { ref: functionRef }, 'hi');
+h(RefComponentTest, { ref: functionRef }, 'hi');
+
+// Should accept onInput
+const onInput = (e: h.JSX.TargetedEvent<HTMLInputElement>) => {};
+<input onInput={onInput} />;
+createElement('input', { onInput: onInput });
+h('input', { onInput: onInput });

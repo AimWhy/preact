@@ -15,6 +15,7 @@ const h = createElement;
 /** @jsx createElement */
 
 describe('debug', () => {
+	/** @type {HTMLDivElement} */
 	let scratch;
 	let errors = [];
 	let warnings = [];
@@ -188,29 +189,6 @@ describe('debug', () => {
 
 		render(<Foo />, scratch);
 		expect(console.warn).to.not.be.called;
-	});
-
-	it('should warn when calling setState on an unmounted Component', () => {
-		let setState;
-
-		class Foo extends Component {
-			constructor(props) {
-				super(props);
-				setState = () => this.setState({ foo: true });
-			}
-			render() {
-				return <div>foo</div>;
-			}
-		}
-
-		render(<Foo />, scratch);
-		expect(console.warn).to.not.be.called;
-
-		render(null, scratch);
-
-		setState();
-		expect(console.warn).to.be.calledOnce;
-		expect(console.warn.args[0]).to.match(/no-op/);
 	});
 
 	it('should warn when calling forceUpdate inside the constructor', () => {
@@ -534,6 +512,19 @@ describe('debug', () => {
 				</table>
 			);
 			render(<Table />, scratch);
+			expect(console.error).to.not.be.called;
+		});
+
+		it('should include DOM parents outside of root node', () => {
+			const Table = () => (
+				<tr>
+					<td>Head</td>
+				</tr>
+			);
+
+			const table = document.createElement('table');
+			scratch.appendChild(table);
+			render(<Table />, table);
 			expect(console.error).to.not.be.called;
 		});
 	});
